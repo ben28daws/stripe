@@ -14,25 +14,29 @@ app.get('/', (req, res) => {
 
 app.post('/process-payment', async (req, res) => {
   try {
-    const { token, billing_details } = req.body; 
-    const amount = 1000; 
+    const { paymentMethodId } = req.body;
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount,
-      currency: 'inr',
-      payment_method_data: {
-        type: 'card',
-        card: {
-          token: token,
-        },
-      },
+      payment_method: paymentMethodId,
       confirmation_method: 'manual',
+      confirm: true,
+      off_session: true,
+      currency: 'USD',
+      amount: 1000, 
       description: 'Sample Payment',
-      billing_details: billing_details,
     });
 
-   
-    res.status(200).json({ success: true, message: 'Payment succeeded' });
+    if (paymentIntent.status === 'requires_action') {
+      res.json({
+        requiresAction: true,
+        clientSecret: paymentIntent.client_secret,
+        redirectUrl: paymentIntent.next_action.redirect_to_url.url,
+      });
+    } else if (paymentIntent.status === 'succeeded') {
+      res.json({ success: true, message: 'Payment succeeded' });
+    } else {
+      res.json({ success: false, message: 'Payment failed' });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Payment failed' });
