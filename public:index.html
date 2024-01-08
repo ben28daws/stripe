@@ -34,6 +34,19 @@
     <h2>Card Payment</h2>
     
     <form id="payment-form">
+      <label for="name">Name</label>
+      <input type="text" id="name" value="Sample User">
+      <label for="email">Email</label>
+      <input type="email" id="email" value="sample@gmail.com">
+      <label for="city">City</label>
+      <input type="text" id="city" value="Texas">
+      <label for="country">Country</label>
+      <input type="text" id="country" value="US">
+      <label for="line1">Line1</label>
+      <input type="text" id="line1" value="Abc">
+      <label for="line2">Line2</label>
+      <input type="text" id="line2" value="Com">
+
       <div class="card-element"></div>
       <div id="card-errors" role="alert"></div>
       <button type="button" id="submit-payment">Submit Payment</button>
@@ -58,7 +71,27 @@
 
     const submitButton = document.getElementById('submit-payment');
     submitButton.addEventListener('click', async function() {
-      const { token, error } = await stripe.createToken(card);
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const city = document.getElementById('city').value;
+      const country = document.getElementById('country').value;
+      const line1 = document.getElementById('line1').value;
+      const line2 = document.getElementById('line2').value;
+
+      const { paymentMethod, error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: card,
+        billing_details: {
+          name: name,
+          email: email,
+          address: {
+            city: city,
+            country: country,
+            line1: line1,
+            line2: line2,
+          },
+        },
+      });
 
       if (error) {
         const errorElement = document.getElementById('card-errors');
@@ -70,13 +103,15 @@
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            token: token.id,
+            paymentMethodId: paymentMethod.id,
           }),
         })
         .then(response => response.json())
         .then(data => {
           console.log(data);
-          if (data.success) {
+          if (data.requiresAction) {
+            window.location.replace(data.redirectUrl);
+          } else if (data.success) {
             console.log('Payment succeeded');
           } else {
             console.error('Payment failed');
